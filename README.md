@@ -338,7 +338,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Ricardo Silva**
 - 🔗 LinkedIn: [linkedin.com/in/ricardo-silva](https://linkedin.com/in/ricardo-silva)
 - 🐙 GitHub: [@Mendes1982](https://github.com/Mendes1982)
-- 📧 Email: ricardo.silva@example.com
+- 📧 Email: tvmax360ofc@gmail.com
 
 ---
 
