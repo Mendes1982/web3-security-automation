@@ -1,0 +1,133 @@
+<svg width="1500" height="500" viewBox="0 0 1500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0f23;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:1" />
+    </linearGradient>
+    
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+  
+  <!-- Fundo -->
+  <rect width="1500" height="500" fill="url(#bgGradient2)"/>
+  
+  <!-- Elementos decorativos geométricos -->
+  <polygon points="0,0 400,0 200,500 0,500" fill="rgba(78,205,196,0.05)"/>
+  <polygon points="1500,0 1500,500 1100,500 1300,0" fill="rgba(255,107,107,0.05)"/>
+  
+  <!-- Linhas de código decorativas -->
+  <g opacity="0.1" font-family="monospace" font-size="12" fill="#4ecdc4">
+    <text x="50" y="50">const web3 = new Web3Automation();</text>
+    <text x="50" y="70">await metamask.connect();</text>
+    <text x="50" y="90">await contract.testSecurity();</text>
+    <text x="50" y="110">// All tests passed ✓</text>
+  </g>
+  
+  <!-- Foto do autor - Hexágono -->
+  <defs>
+    <clipPath id="hexagonView">
+      <polygon points="250,100 350,100 400,186 350,273 250,273 200,186"/>
+    </clipPath>
+  </defs>
+  
+  <g transform="translate(80, 110)">
+    <!-- Hexágono de fundo -->
+    <polygon points="250,0 350,0 400,86 350,173 250,173 200,86" 
+             fill="#2a2a4a" stroke="url(#accentGradient)" stroke-width="4" filter="url(#shadow)"/>
+    
+    <!-- Placeholder para foto -->
+    <text x="300" y="80" text-anchor="middle" fill="#4ecdc4" font-family="Arial" font-size="16" font-weight="bold">SUA</text>
+    <text x="300" y="105" text-anchor="middle" fill="#4ecdc4" font-family="Arial" font-size="16" font-weight="bold">FOTO</text>
+    <text x="300" y="130" text-anchor="middle" fill="#666" font-family="Arial" font-size="12">400x400</text>
+  </g>
+  
+  <!-- Nome e título -->
+  <text x="500" y="160" fill="#ffffff" font-family="Arial" font-size="28" font-weight="bold">
+    Ricardo Silva
+  </text>
+  <text x="500" y="190" fill="#4ecdc4" font-family="Arial" font-size="16">
+    QA Automation Engineer • Blockchain Enthusiast
+  </text>
+  
+  <!-- Linha divisória -->
+  <line x1="500" y1="210" x2="1000" y2="210" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  
+  <!-- Título do projeto -->
+  <text x="500" y="270" fill="#ffffff" font-family="Arial Black, Arial" font-size="48" font-weight="bold">
+    FRAMEWORK DE
+  </text>
+  <text x="500" y="325" fill="url(#accentGradient)" font-family="Arial Black, Arial" font-size="48" font-weight="bold">
+    AUTOMAÇÃO WEB3
+  </text>
+  
+  <!-- Descrição -->
+  <text x="500" y="370" fill="#aaa" font-family="Arial" font-size="18">
+    Testes E2E para DApps com MetaMask, Smart Contracts e CI/CD
+  </text>
+  
+  <!-- Features em formato de lista -->
+  <g transform="translate(500, 410)">
+    <g transform="translate(0, 0)">
+      <circle cx="8" cy="8" r="4" fill="#ff6b6b"/>
+      <text x="25" y="13" fill="#fff" font-family="Arial" font-size="14">Integração MetaMask</text>
+    </g>
+    <g transform="translate(200, 0)">
+      <circle cx="8" cy="8" r="4" fill="#4ecdc4"/>
+      <text x="25" y="13" fill="#fff" font-family="Arial" font-size="14">Testes de Segurança</text>
+    </g>
+    <g transform="translate(400, 0)">
+      <circle cx="8" cy="8" r="4" fill="#ffe66d"/>
+      <text x="25" y="13" fill="#fff" font-family="Arial" font-size="14">Playwright + TS</text>
+    </g>
+  </g>
+  
+  <!-- GitHub stats / info -->
+  <g transform="translate(500, 460)">
+    <rect x="0" y="0" width="450" height="30" rx="5" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <text x="225" y="20" text-anchor="middle" fill="#4ecdc4" font-family="Arial" font-size="14">
+      ⭐ github.com/Mendes1982/web3-security-automation
+    </text>
+  </g>
+  
+  <!-- Tech stack icons lado direito -->
+  <g transform="translate(1200, 150)">
+    <rect x="0" y="0" width="250" height="280" rx="15" fill="rgba(0,0,0,0.3)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    
+    <text x="125" y="30" text-anchor="middle" fill="#fff" font-family="Arial" font-size="14" font-weight="bold">TECH STACK</text>
+    
+    <g transform="translate(20, 50)">
+      <rect x="0" y="0" width="210" height="35" rx="5" fill="#45ba4b"/>
+      <text x="105" y="23" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">▶ Playwright</text>
+    </g>
+    
+    <g transform="translate(20, 95)">
+      <rect x="0" y="0" width="210" height="35" rx="5" fill="#3178c6"/>
+      <text x="105" y="23" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">⌘ TypeScript</text>
+    </g>
+    
+    <g transform="translate(20, 140)">
+      <rect x="0" y="0" width="210" height="35" rx="5" fill="#3c3c3d"/>
+      <text x="105" y="23" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">◆ Ethereum</text>
+    </g>
+    
+    <g transform="translate(20, 185)">
+      <rect x="0" y="0" width="210" height="35" rx="5" fill="#e2761b"/>
+      <text x="105" y="23" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">🦊 MetaMask</text>
+    </g>
+    
+    <g transform="translate(20, 230)">
+      <rect x="0" y="0" width="210" height="35" rx="5" fill="#2496ed"/>
+      <text x="105" y="23" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="bold">🐳 Docker</text>
+    </g>
+  </g>
+  
+  <!-- Corner decoration -->
+  <text x="1470" y="480" text-anchor="end" fill="rgba(255,255,255,0.1)" font-family="Arial" font-size="60" font-weight="bold">{ }</text>
+</svg>
