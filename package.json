@@ -1,0 +1,101 @@
+{
+  "name": "web3-security-automation",
+  "version": "1.0.0",
+  "description": "Comprehensive Web3 DApp testing framework with MetaMask integration and smart contract security testing",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:parallel": "playwright test --workers=4",
+    "test:serial": "playwright test --workers=1",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:security": "playwright test tests/security/",
+    "test:e2e": "playwright test tests/e2e/",
+    "test:performance": "playwright test tests/performance/",
+    "report": "playwright show-report",
+    "report:html": "playwright test --reporter=html",
+    "report:junit": "playwright test --reporter=junit --output=test-results/junit.xml",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky install",
+    "docker:build": "docker build -t web3-security-automation .",
+    "docker:run": "docker run --rm -v $(pwd)/test-results:/app/test-results web3-security-automation",
+    "docker:test": "npm run docker:build && npm run docker:run",
+    "contract:compile": "hardhat compile",
+    "contract:test": "hardhat test",
+    "contract:deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "contract:deploy:testnet": "hardhat run scripts/deploy.ts --network goerli",
+    "node:start": "hardhat node",
+    "playwright:install": "playwright install",
+    "playwright:install-deps": "playwright install-deps"
+  },
+  "keywords": [
+    "web3",
+    "blockchain",
+    "ethereum",
+    "playwright",
+    "testing",
+    "automation",
+    "metamask",
+    "smart-contracts",
+    "dapp",
+    "defi",
+    "nft",
+    "security",
+    "qa",
+    "typescript",
+    "e2e-testing"
+  ],
+  "author": "Ricardo Silva <ricardo.silva@example.com> (https://github.com/Mendes1982)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mendes1982/web3-security-automation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mendes1982/web3-security-automation/issues"
+  },
+  "homepage": "https://github.com/Mendes1982/web3-security-automation#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-playwright": "^0.20.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@metamask/detect-provider": "^2.0.0",
+    "ethers": "^6.9.0",
+    "hardhat": "^2.19.2",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}

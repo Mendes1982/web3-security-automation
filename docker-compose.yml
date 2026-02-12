@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Local Ethereum blockchain for testing
+  hardhat-node:
+    image: ethereumoptimism/hardhat:latest
+    container_name: web3-hardhat-node
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./contracts:/contracts
+      - ./hardhat.config.js:/hardhat.config.js
+    command: ["npx", "hardhat", "node", "--hostname", "0.0.0.0"]
+    networks:
+      - web3-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test runner service
+  web3-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: web3-security-tests
+    environment:
+      - CI=true
+      - LOCAL_RPC_URL=http://hardhat-node:8545
+      - NODE_ENV=test
+    volumes:
+      - ./test-results:/app/test-results
+      - ./playwright-report:/app/playwright-report
+    depends_on:
+      hardhat-node:
+        condition: service_healthy
+    networks:
+      - web3-network
+    command: ["npm", "test"]
+
+  # Debug mode - keeps container running for debugging
+  web3-tests-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: debug
+    container_name: web3-security-tests-debug
+    environment:
+      - CI=false
+      - LOCAL_RPC_URL=http://hardhat-node:8545
+      - NODE_ENV=development
+      - HEADED=true
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "9323:9323"  # Playwright UI port
+    depends_on:
+      - hardhat-node
+    networks:
+      - web3-network
+    profiles:
+      - debug
+
+  # Report server
+  report-server:
+    image: nginx:alpine
+    container_name: web3-report-server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./playwright-report:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - web3-network
+    profiles:
+      - report
+
+networks:
+  web3-network:
+    driver: bridge
+
+volumes:
+  test-results:
+  playwright-report:

@@ -1,0 +1,340 @@
+name: CI/CD - Web3 Security Automation
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run security tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - regression
+          - security
+          - performance
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+
+env:
+  CI: true
+  NODE_ENV: test
+  PLAYWRIGHT_BROWSERS_PATH: 0
+
+jobs:
+  # Job 1: Lint and Type Check
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+      - name: Check code formatting
+        run: npm run format:check
+
+  # Job 2: Run Tests
+  test:
+    name: Run Tests
+    needs: lint-and-typecheck
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, firefox, webkit]
+        shard: [1/3, 2/3, 3/3]
+        include:
+          - project: chromium
+            name: Chrome
+          - project: firefox
+            name: Firefox
+          - project: webkit
+            name: Safari
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.project }}
+
+      - name: Start local blockchain
+        run: |
+          npm install -g hardhat
+          npx hardhat node &
+          sleep 10
+          echo "Local blockchain started"
+
+      - name: Run Playwright tests
+        run: |
+          if [ "${{ github.event.inputs.test_suite }}" == "smoke" ]; then
+            npm run test:smoke -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}
+          elif [ "${{ github.event.inputs.test_suite }}" == "security" ]; then
+            npm run test:security -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}
+          elif [ "${{ github.event.inputs.test_suite }}" == "performance" ]; then
+            npm run test:performance -- --project=${{ matrix.project }} --shard=${{ matrix.shard }}
+          else
+            npm run test:${{ matrix.project }} -- --shard=${{ matrix.shard }}
+          fi
+        env:
+          LOCAL_RPC_URL: http://127.0.0.1:8545
+          TEST_WALLET_PRIVATE_KEY: ${{ secrets.TEST_WALLET_PRIVATE_KEY }}
+          TEST_WALLET_MNEMONIC: ${{ secrets.TEST_WALLET_MNEMONIC }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.project }}-${{ strategy.job-index }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: matrix.project == 'chromium'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+  # Job 3: Security Scan
+  security-scan:
+    name: Security Analysis
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event.inputs.test_suite == 'security'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install chromium
+
+      - name: Run security tests
+        run: npm run test:security
+        env:
+          LOCAL_RPC_URL: http://127.0.0.1:8545
+
+      - name: Generate security report
+        run: |
+          echo "# Security Test Report" > security-report.md
+          echo "Date: $(date)" >> security-report.md
+          echo "Commit: ${{ github.sha }}" >> security-report.md
+          echo "" >> security-report.md
+          echo "## Results" >> security-report.md
+          echo "Security tests completed. Check artifacts for details." >> security-report.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+          retention-days: 90
+
+  # Job 4: Docker Build Test
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: web3-security-automation:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm web3-security-automation:test npm run typecheck
+
+  # Job 5: Publish Test Report
+  publish-report:
+    name: Publish Test Report
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Merge test results
+        run: |
+          mkdir -p merged-results
+          for dir in artifacts/test-results-*; do
+            cp -r "$dir"/* merged-results/ 2>/dev/null || true
+          done
+
+      - name: Publish test report to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./merged-results
+          destination_dir: test-reports/${{ github.run_number }}
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Read test summary if available
+            let summary = 'Tests completed';
+            try {
+              const summaryPath = path.join('artifacts', 'test-results-chromium-1', 'summary.json');
+              if (fs.existsSync(summaryPath)) {
+                const data = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+                summary = `Test Results: ${data.results} test files processed`;
+              }
+            } catch (e) {
+              console.log('Could not read summary');
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧪 Web3 Security Automation - Test Results
+              
+              ${summary}
+              
+              - **Commit**: ${{ github.sha }}
+              - **Branch**: ${{ github.head_ref }}
+              - **Workflow**: ${{ github.workflow }}
+              
+              [View detailed report](https://mendes1982.github.io/web3-security-automation/test-reports/${{ github.run_number }}/)
+              
+              ---
+              *Generated by GitHub Actions*`
+            });
+
+  # Job 6: Release
+  release:
+    name: Create Release
+    needs: [test, docker-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          release_name: Release v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## Web3 Security Automation Framework v${{ steps.get_version.outputs.VERSION }}
+            
+            ### Changes
+            - Automated release from CI/CD pipeline
+            - All tests passing
+            
+            ### Test Results
+            See [test report](https://mendes1982.github.io/web3-security-automation/test-reports/${{ github.run_number }}/)
+            
+            ### Docker Image
+            ```bash
+            docker pull ghcr.io/mendes1982/web3-security-automation:v${{ steps.get_version.outputs.VERSION }}
+            ```
+          draft: false
+          prerelease: false
+
+  # Job 7: Notify
+  notify:
+    name: Send Notifications
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Slack Notification
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#web3-automation-alerts'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Discord Notification
+        if: always()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          title: "Web3 Security Automation - CI/CD"
+          description: "Build and test completed"
+          color: ${{ needs.test.result == 'success' && '0x00ff00' || '0xff0000' }}
