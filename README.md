@@ -20,7 +20,10 @@
 
 <p align="center">
   <a href="https://github.com/Mendes1982/web3-security-automation/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/Mendes1982/web3-security-automation/ci.yml?branch=main&style=flat-square&label=CI/CD" alt="CI/CD" />
+    <img src="https://img.shields.io/github/actions/workflow/status/Mendes1982/web3-security-automation/ci.yml?branch=main&style=flat-square&label=GitHub%20Actions&logo=github" alt="GitHub Actions" />
+  </a>
+  <a href="https://circleci.com/gh/Mendes1982/web3-security-automation">
+    <img src="https://img.shields.io/circleci/build/github/Mendes1982/web3-security-automation/main?style=flat-square&label=CircleCI&logo=circleci" alt="CircleCI" />
   </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT" />

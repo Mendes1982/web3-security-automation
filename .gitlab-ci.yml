@@ -1,0 +1,212 @@
+# GitLab CI/CD Configuration
+# Alternative CI/CD for web3-security-automation
+# Unlimited minutes for public repositories on GitLab.com
+
+stages:
+  - lint
+  - test
+  - security
+  - build
+  - deploy
+
+variables:
+  CI: "true"
+  NODE_ENV: "test"
+  PLAYWRIGHT_BROWSERS_PATH: "0"
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  CYPRESS_CACHE_FOLDER: "$CI_PROJECT_DIR/cache/Cypress"
+
+# Cache configuration
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .npm/
+    - node_modules/
+    - cache/Cypress/
+
+# Default image with Node.js and browsers
+image: node:20-slim
+
+# Job templates
+.default-before-script: &default-before-script
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends
+      git
+      ca-certificates
+      libnss3
+      libnspr4
+      libatk1.0-0
+      libatk-bridge2.0-0
+      libcups2
+      libdrm2
+      libxkbcommon0
+      libxcomposite1
+      libxdamage1
+      libxfixes3
+      libxrandr2
+      libgbm1
+      libasound2
+      libpango-1.0-0
+      libcairo2
+      libatspi2.0-0
+    - npm ci
+
+# Stage 1: Lint and Type Check
+lint-and-typecheck:
+  stage: lint
+  <<: *default-before-script
+  script:
+    - npm run lint
+    - npm run typecheck
+    - npm run format:check
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+    expire_in: 1 week
+
+# Stage 2: Smoke Tests (Quick validation)
+smoke-tests:
+  stage: test
+  <<: *default-before-script
+  script:
+    - npx playwright install chromium
+    - npm run test:smoke
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 1 week
+  dependencies:
+    - lint-and-typecheck
+
+# Stage 3: Test on Chromium
+test-chromium:
+  stage: test
+  <<: *default-before-script
+  script:
+    - npx playwright install chromium
+    - npm run test:chromium
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 1 week
+  dependencies:
+    - lint-and-typecheck
+  parallel:
+    matrix:
+      - CI_NODE_INDEX: [1, 2, 3]
+        CI_NODE_TOTAL: 3
+
+# Stage 4: Test on Firefox
+test-firefox:
+  stage: test
+  <<: *default-before-script
+  script:
+    - npx playwright install firefox
+    - npm run test:firefox
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 1 week
+  dependencies:
+    - lint-and-typecheck
+  allow_failure: true  # Firefox tests can fail without blocking
+
+# Stage 5: Test on WebKit
+test-webkit:
+  stage: test
+  <<: *default-before-script
+  script:
+    - npx playwright install webkit
+    - npm run test:webkit
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - playwright-report/
+    expire_in: 1 week
+  dependencies:
+    - lint-and-typecheck
+  allow_failure: true  # WebKit tests can fail without blocking
+
+# Stage 6: Security Tests
+test-security:
+  stage: security
+  <<: *default-before-script
+  script:
+    - npx playwright install chromium
+    - npm run test:security
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - security-report.md
+    expire_in: 1 month
+  dependencies:
+    - lint-and-typecheck
+  only:
+    - main
+    - develop
+    - schedules
+
+# Stage 7: Docker Build
+docker-build:
+  stage: build
+  image: docker:24-dind
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest
+    - docker run --rm $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA npm run typecheck
+  only:
+    - main
+    - merge_requests
+
+# Stage 8: Deploy (example for GitLab Pages)
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public
+    - cp -r playwright-report/* public/ || true
+    - echo "Test report deployed"
+  artifacts:
+    paths:
+      - public
+  dependencies:
+    - test-chromium
+  only:
+    - main
+
+# Scheduled pipeline for security scans
+security-scan-scheduled:
+  stage: security
+  <<: *default-before-script
+  script:
+    - npx playwright install chromium
+    - npm run test:security
+    - echo "Security scan completed at $(date)"
+  artifacts:
+    reports:
+      junit: test-results/junit.xml
+    paths:
+      - test-results/
+      - security-report.md
+    expire_in: 3 months
+  only:
+    - schedules

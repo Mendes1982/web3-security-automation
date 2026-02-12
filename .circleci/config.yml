@@ -1,0 +1,218 @@
+# CircleCI Configuration
+# Alternative CI/CD for web3-security-automation
+# 2500 free minutes/month for public repositories
+
+version: 2.1
+
+# Orbs (pre-built configurations)
+orbs:
+  node: circleci/node@5.1.0
+  browser-tools: circleci/browser-tools@1.4.6
+
+# Define jobs
+jobs:
+  # Job 1: Lint and Type Check
+  lint-and-typecheck:
+    docker:
+      - image: cimg/node:20.10
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          name: Run ESLint
+          command: npm run lint
+      - run:
+          name: Run TypeScript Type Check
+          command: npm run typecheck
+      - run:
+          name: Check Code Formatting
+          command: npm run format:check
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+
+  # Job 2: Run Tests on Chromium
+  test-chromium:
+    docker:
+      - image: cimg/node:20.10-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - browser-tools/install-browser-tools
+      - run:
+          name: Install Playwright
+          command: npx playwright install chromium
+      - run:
+          name: Run Tests on Chromium
+          command: npm run test:chromium
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+      - store_artifacts:
+          path: playwright-report
+          destination: playwright-report
+
+  # Job 3: Run Tests on Firefox
+  test-firefox:
+    docker:
+      - image: cimg/node:20.10-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - browser-tools/install-browser-tools
+      - run:
+          name: Install Playwright
+          command: npx playwright install firefox
+      - run:
+          name: Run Tests on Firefox
+          command: npm run test:firefox
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+
+  # Job 4: Run Tests on WebKit
+  test-webkit:
+    docker:
+      - image: cimg/node:20.10-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - browser-tools/install-browser-tools
+      - run:
+          name: Install Playwright
+          command: npx playwright install webkit
+      - run:
+          name: Run Tests on WebKit
+          command: npm run test:webkit
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+
+  # Job 5: Security Tests
+  test-security:
+    docker:
+      - image: cimg/node:20.10-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - browser-tools/install-browser-tools
+      - run:
+          name: Install Playwright
+          command: npx playwright install chromium
+      - run:
+          name: Run Security Tests
+          command: npm run test:security
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: security-test-results
+
+  # Job 6: Docker Build Test
+  docker-build:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker Image
+          command: docker build -t web3-security-automation:test .
+      - run:
+          name: Test Docker Image
+          command: docker run --rm web3-security-automation:test npm run typecheck
+
+  # Job 7: Smoke Tests (Quick validation)
+  smoke-tests:
+    docker:
+      - image: cimg/node:20.10-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - browser-tools/install-browser-tools
+      - run:
+          name: Install Playwright
+          command: npx playwright install chromium
+      - run:
+          name: Run Smoke Tests
+          command: npm run test:smoke
+
+# Define workflows
+workflows:
+  version: 2
+  
+  # Main workflow - runs on every push
+  ci-cd-pipeline:
+    jobs:
+      - lint-and-typecheck
+      
+      - smoke-tests:
+          requires:
+            - lint-and-typecheck
+          
+      - docker-build:
+          requires:
+            - lint-and-typecheck
+      
+      - test-chromium:
+          requires:
+            - smoke-tests
+          
+      - test-firefox:
+          requires:
+            - smoke-tests
+          
+      - test-webkit:
+          requires:
+            - smoke-tests
+      
+      - test-security:
+          requires:
+            - test-chromium
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+
+  # Scheduled security scan - runs daily at 2 AM UTC
+  scheduled-security-scan:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - lint-and-typecheck
+      - test-security:
+          requires:
+            - lint-and-typecheck
+
+# Custom notifications
+notify:
+  webhooks:
+    # Optional: Slack webhook for notifications
+    - url: $SLACK_WEBHOOK_URL
+
+# Job defaults
+defaults: &defaults
+  working_directory: ~/web3-security-automation
+  environment:
+    CI: "true"
+    NODE_ENV: "test"
